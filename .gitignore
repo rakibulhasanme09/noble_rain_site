@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contains real API keys/secrets)
+.env
+.env.local
+.env.*.local
+
+# Build output
+frontend/dist/
+frontend/build/
+
+# Uploaded product images (runtime user content, not source)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Editor/OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code local config
+.claude/
