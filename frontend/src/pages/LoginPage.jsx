@@ -1,18 +1,26 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import axios from 'axios';
 
 const LoginPage = () => {
     const [isLogin, setIsLogin] = useState(true);
+    const [step, setStep] = useState('form'); // 'form' | 'otp' | 'forgot-email' | 'forgot-reset'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
+    const [otpCode, setOtpCode] = useState('');
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [resending, setResending] = useState(false);
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [resetCode, setResetCode] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [infoMessage, setInfoMessage] = useState('');
 
-    const { login, user } = useContext(AuthContext);
+    const { login, setAuthData, user } = useContext(AuthContext);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -35,11 +43,10 @@ const LoginPage = () => {
                 setError(result.message);
             }
         } else {
-            // Register logic
+            // Register logic - creates an unverified account and emails an OTP
             try {
-                const { data } = await axios.post('/api/auth/register', { name, email, password });
-                // auto login after register
-                await login(email, password);
+                await axios.post('/api/auth/register', { name, email, password });
+                setStep('otp');
             } catch (err) {
                 setError(err.response?.data?.message || 'Registration failed');
             }
@@ -47,13 +54,203 @@ const LoginPage = () => {
         setSubmitting(false);
     };
 
+    const otpSubmitHandler = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSubmitting(true);
+        try {
+            const { data } = await axios.post('/api/auth/verify-otp', { email, code: otpCode });
+            setAuthData(data);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Verification failed');
+        }
+        setSubmitting(false);
+    };
+
+    const resendOtpHandler = async () => {
+        setResending(true);
+        setError('');
+        try {
+            await axios.post('/api/auth/resend-otp', { email });
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to resend code');
+        }
+        setResending(false);
+    };
+
+    const forgotEmailSubmitHandler = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSubmitting(true);
+        try {
+            const { data } = await axios.post('/api/auth/forgot-password', { email: forgotEmail });
+            setInfoMessage(data.message);
+            setStep('forgot-reset');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to send reset code');
+        }
+        setSubmitting(false);
+    };
+
+    const resetPasswordSubmitHandler = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSubmitting(true);
+        try {
+            const { data } = await axios.post('/api/auth/reset-password', {
+                email: forgotEmail,
+                code: resetCode,
+                newPassword,
+            });
+            setAuthData(data);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to reset password');
+        }
+        setSubmitting(false);
+    };
+
+    const backToLogin = () => {
+        setStep('form');
+        setIsLogin(true);
+        setError('');
+        setInfoMessage('');
+        setForgotEmail('');
+        setResetCode('');
+        setNewPassword('');
+    };
+
+    if (step === 'forgot-email') {
+        return (
+            <div className="container animate-fade-in" style={styles.page}>
+                <div style={styles.formContainer}>
+                    <h1 style={styles.title}>Reset Password</h1>
+                    <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
+                        Enter your account email and we'll send you a code to reset your password.
+                    </p>
+
+                    {error && <div style={styles.errorAlert}>{error}</div>}
+
+                    <form onSubmit={forgotEmailSubmitHandler}>
+                        <div className="input-group">
+                            <label>Email Address</label>
+                            <input
+                                type="email"
+                                required
+                                value={forgotEmail}
+                                onChange={(e) => setForgotEmail(e.target.value)}
+                                placeholder="name@gmail.com"
+                            />
+                        </div>
+                        <button type="submit" className="btn btn-primary" style={styles.submitBtn} disabled={submitting}>
+                            {submitting ? 'Sending...' : 'Send Reset Code'}
+                        </button>
+                    </form>
+
+                    <div style={styles.switchMode}>
+                        <button style={styles.switchBtn} onClick={backToLogin} type="button">Back to Sign In</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 'forgot-reset') {
+        return (
+            <div className="container animate-fade-in" style={styles.page}>
+                <div style={styles.formContainer}>
+                    <h1 style={styles.title}>Enter Reset Code</h1>
+                    <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
+                        {infoMessage || `If an account exists for ${forgotEmail}, a reset code has been sent.`}
+                    </p>
+
+                    {error && <div style={styles.errorAlert}>{error}</div>}
+
+                    <form onSubmit={resetPasswordSubmitHandler}>
+                        <div className="input-group">
+                            <label>Reset Code</label>
+                            <input
+                                type="text"
+                                required
+                                inputMode="numeric"
+                                maxLength={6}
+                                value={resetCode}
+                                onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))}
+                                placeholder="123456"
+                                style={{ textAlign: 'center', letterSpacing: '0.3em', fontSize: '1.2rem' }}
+                            />
+                        </div>
+                        <div className="input-group">
+                            <label>New Password</label>
+                            <input
+                                type="password"
+                                required
+                                minLength={6}
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="********"
+                            />
+                        </div>
+                        <button type="submit" className="btn btn-primary" style={styles.submitBtn} disabled={submitting || resetCode.length !== 6}>
+                            {submitting ? 'Resetting...' : 'Reset Password'}
+                        </button>
+                    </form>
+
+                    <div style={styles.switchMode}>
+                        <button style={styles.switchBtn} onClick={backToLogin} type="button">Back to Sign In</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 'otp') {
+        return (
+            <div className="container animate-fade-in" style={styles.page}>
+                <div style={styles.formContainer}>
+                    <h1 style={styles.title}>Verify Your Email</h1>
+                    <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
+                        We sent a 6-digit code to <strong>{email}</strong>. Enter it below to activate your account.
+                    </p>
+
+                    {error && <div style={styles.errorAlert}>{error}</div>}
+
+                    <form onSubmit={otpSubmitHandler}>
+                        <div className="input-group">
+                            <label>Verification Code</label>
+                            <input
+                                type="text"
+                                required
+                                inputMode="numeric"
+                                maxLength={6}
+                                value={otpCode}
+                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                placeholder="123456"
+                                style={{ textAlign: 'center', letterSpacing: '0.3em', fontSize: '1.2rem' }}
+                            />
+                        </div>
+                        <button type="submit" className="btn btn-primary" style={styles.submitBtn} disabled={submitting || otpCode.length !== 6}>
+                            {submitting ? 'Verifying...' : 'Verify & Continue'}
+                        </button>
+                    </form>
+
+                    <div style={styles.switchMode}>
+                        Didn't get a code?
+                        <button style={styles.switchBtn} onClick={resendOtpHandler} disabled={resending} type="button">
+                            {resending ? 'Sending...' : 'Resend code'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="container animate-fade-in" style={styles.page}>
             <div style={styles.formContainer}>
                 <h1 style={styles.title}>{isLogin ? 'Sign In' : 'Create Account'}</h1>
-                
+
                 {error && <div style={styles.errorAlert}>{error}</div>}
-                
+
                 <form onSubmit={submitHandler}>
                     {!isLogin && (
                         <div className="input-group">
@@ -116,16 +313,30 @@ const LoginPage = () => {
                             )}
                         </button>
                     </div>
-                    
+
+                    {isLogin && (
+                        <div style={{ textAlign: 'right', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                            <button
+                                type="button"
+                                style={styles.forgotBtn}
+                                onClick={() => { setStep('forgot-email'); setForgotEmail(email); setError(''); }}
+                            >
+                                Forgot password?
+                            </button>
+                        </div>
+                    )}
+
                     <button type="submit" className="btn btn-primary" style={styles.submitBtn} disabled={submitting}>
                         {submitting ? 'Please wait...' : (isLogin ? 'Sign In' : 'Register')}
                     </button>
                 </form>
 
+                <GoogleSignInButton />
+
                 <div style={styles.switchMode}>
                     {isLogin ? 'New to Noble Rain?' : 'Already have an account?'}
-                    <button 
-                        style={styles.switchBtn} 
+                    <button
+                        style={styles.switchBtn}
                         onClick={() => setIsLogin(!isLogin)}
                         type="button"
                     >
@@ -177,6 +388,11 @@ const styles = {
         marginLeft: '0.5rem',
         color: 'var(--color-text-main)',
         fontWeight: '600',
+        textDecoration: 'underline',
+    },
+    forgotBtn: {
+        color: 'var(--color-text-muted)',
+        fontSize: '0.85rem',
         textDecoration: 'underline',
     },
     errorAlert: {

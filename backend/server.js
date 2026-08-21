@@ -19,8 +19,15 @@ dotenv.config();
 
 const app = express();
 
+// In production, restrict to the known frontend origin(s) via CORS_ORIGIN
+// (comma-separated). Left open by default so local dev (Vite's own origin,
+// which proxies to this server) keeps working without extra setup.
+const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : null;
+
 // Middleware
-app.use(cors());
+app.use(cors(allowedOrigins ? { origin: allowedOrigins } : {}));
 app.use(express.json());
 
 // Routes

@@ -2,6 +2,10 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
 const { checkCouponValidity, computeDiscount } = require('./couponController');
+const { sendMail } = require('../utils/mailer');
+const { orderConfirmationEmail } = require('../utils/emailTemplates');
+const { buildInvoicePdf } = require('../utils/invoicePdf');
+const { createSalesReport } = require('../utils/googleSheets');
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -66,6 +70,27 @@ const addOrderItems = async (req, res) => {
         if (coupon) {
             coupon.usedCount += 1;
             await coupon.save();
+        }
+
+        const recipientEmail = createdOrder.guestEmail || (req.user && req.user.email);
+        if (recipientEmail) {
+            (async () => {
+                try {
+                    const pdfBuffer = await buildInvoicePdf(createdOrder);
+                    const { subject, html } = orderConfirmationEmail(createdOrder);
+                    await sendMail({
+                        to: recipientEmail,
+                        subject,
+                        html,
+                        attachments: [{
+                            filename: `invoice-${createdOrder._id.toString().substring(0, 8).toUpperCase()}.pdf`,
+                            content: pdfBuffer,
+                        }],
+                    });
+                } catch (err) {
+                    console.error('Order confirmation email failed:', err);
+                }
+            })();
         }
 
         res.status(201).json(createdOrder);
@@ -390,6 +415,21 @@ const getRevenueStats = async (req, res) => {
         yearlyData
     });
 };
+// @desc    Generate a sales report as a Google Sheet for a date range
+// @route   POST /api/orders/sales-report
+// @access  Private/Admin
+const generateSalesReport = async (req, res) => {
+    const { startDate, endDate } = req.body;
+
+    if (!startDate || !endDate) {
+        res.status(400);
+        throw new Error('Start date and end date are required');
+    }
+
+    const url = await createSalesReport(startDate, endDate);
+    res.json({ url });
+};
+
 // @desc    Dispatch order to courier
 // @route   POST /api/orders/:id/dispatch
 // @access  Private/Admin
@@ -410,9 +450,8 @@ const dispatchOrder = async (req, res) => {
                 recipient_phone: order.guestPhone || '01000000000',
                 recipient_address: `${order.shippingAddress.address}, ${order.shippingAddress.city}`,
                 cod_amount: order.totalPrice,
-                weight: order.totalWeight || 0.5,
-                item_description: `Weight: ${order.totalWeight || 0.5}kg`,
-                note: ""
+                item_description: order.orderItems.map(item => `${item.name} x${item.qty}`).join(', '),
+                note: order.orderItems.map(item => item.name).join(', '),
             };
 
             if (process.env.STEADFAST_API_KEY && process.env.STEADFAST_SECRET_KEY) {
@@ -636,4 +675,4 @@ const trackOrder = async (req, res) => {
     res.json(updatedOrder);
 };
 
-module.exports = { addOrderItems, getOrderById, updateOrderToPaid, updateOrderStatus, updateOrderDetails, updateOrderPaymentStatus, updateOrderAmount, getMyOrders, getOrders, deleteOrder, getRevenueStats, dispatchOrder, steadfastWebhook, trackOrder };
+module.exports = { addOrderItems, getOrderById, updateOrderToPaid, updateOrderStatus, updateOrderDetails, updateOrderPaymentStatus, updateOrderAmount, getMyOrders, getOrders, deleteOrder, getRevenueStats, dispatchOrder, steadfastWebhook, trackOrder, generateSalesReport };

@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { addOrderItems, getOrderById, updateOrderToPaid, updateOrderStatus, updateOrderDetails, updateOrderPaymentStatus, updateOrderAmount, getMyOrders, getOrders, deleteOrder, getRevenueStats, dispatchOrder, steadfastWebhook, trackOrder } = require('../controllers/orderController');
+const { addOrderItems, getOrderById, updateOrderToPaid, updateOrderStatus, updateOrderDetails, updateOrderPaymentStatus, updateOrderAmount, getMyOrders, getOrders, deleteOrder, getRevenueStats, dispatchOrder, steadfastWebhook, trackOrder, generateSalesReport } = require('../controllers/orderController');
 const { protect, optionalProtect, admin } = require('../middleware/authMiddleware');
 
 router.route('/').post(optionalProtect, addOrderItems).get(protect, admin, getOrders);
 router.route('/revenue').get(protect, admin, getRevenueStats);
+router.route('/sales-report').post(protect, admin, generateSalesReport);
 router.route('/myorders').get(protect, getMyOrders);
 router.route('/steadfast/webhook').post(steadfastWebhook);
 router.route('/:id').get(protect, getOrderById).delete(protect, admin, deleteOrder);

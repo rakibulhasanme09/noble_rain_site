@@ -8,7 +8,7 @@ const getOrCreateSettings = async () => {
     return settings;
 };
 
-// @desc    Get shipping/return policy text
+// @desc    Get shipping/return/privacy/terms policy text
 // @route   GET /api/settings/policies
 // @access  Public
 const getPolicies = async (req, res) => {
@@ -16,23 +16,29 @@ const getPolicies = async (req, res) => {
     res.json({
         shippingPolicy: settings.shippingPolicy,
         returnPolicy: settings.returnPolicy,
+        privacyPolicy: settings.privacyPolicy,
+        termsOfService: settings.termsOfService,
     });
 };
 
-// @desc    Update shipping/return policy text
+// @desc    Update shipping/return/privacy/terms policy text
 // @route   PUT /api/settings/policies
 // @access  Private/Admin
 const updatePolicies = async (req, res) => {
-    const { shippingPolicy, returnPolicy } = req.body;
+    const { shippingPolicy, returnPolicy, privacyPolicy, termsOfService } = req.body;
     const settings = await getOrCreateSettings();
 
     if (shippingPolicy !== undefined) settings.shippingPolicy = shippingPolicy;
     if (returnPolicy !== undefined) settings.returnPolicy = returnPolicy;
+    if (privacyPolicy !== undefined) settings.privacyPolicy = privacyPolicy;
+    if (termsOfService !== undefined) settings.termsOfService = termsOfService;
 
     const updated = await settings.save();
     res.json({
         shippingPolicy: updated.shippingPolicy,
         returnPolicy: updated.returnPolicy,
+        privacyPolicy: updated.privacyPolicy,
+        termsOfService: updated.termsOfService,
     });
 };
 

@@ -20,19 +20,14 @@ const protect = async (req, res, next) => {
 };
 
 const optionalProtect = async (req, res, next) => {
-    let token;
-    console.log('optionalProtect headers:', req.headers.authorization);
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
-            token = req.headers.authorization.split(' ')[1];
+            const token = req.headers.authorization.split(' ')[1];
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             req.user = await User.findById(decoded.id).select('-password');
-            console.log('optionalProtect set user:', req.user._id);
         } catch (error) {
-            console.error('Optional token failed', error);
+            // Invalid/expired token on an optional route just means anonymous access.
         }
-    } else {
-        console.log('optionalProtect: No authorization header found');
     }
     next();
 };

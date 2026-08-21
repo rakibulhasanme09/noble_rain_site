@@ -39,7 +39,7 @@ const Footer = () => {
                         <ul style={styles.linkList}>
                             <li><Link to="/" style={styles.link}>Shop</Link></li>
                             <li><Link to="/cart" style={styles.link}>Cart</Link></li>
-                            <li><Link to="/dashboard" style={styles.link}>My Orders</Link></li>
+                            <li><Link to="/dashboard" style={styles.link}>Dashboard</Link></li>
                             <li><Link to="/login" style={styles.link}>Login</Link></li>
                         </ul>
                     </div>
@@ -49,6 +49,8 @@ const Footer = () => {
                         <ul style={styles.linkList}>
                             <li><button style={styles.linkBtn} onClick={() => openPolicy('shipping')}>Shipping Policy</button></li>
                             <li><button style={styles.linkBtn} onClick={() => openPolicy('returns')}>Return &amp; Refund Policy</button></li>
+                            <li><Link to="/privacy-policy" style={styles.link}>Privacy Policy</Link></li>
+                            <li><Link to="/terms-of-service" style={styles.link}>Terms of Service</Link></li>
                             <li><a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" style={styles.link}>Order via WhatsApp</a></li>
                         </ul>
                     </div>

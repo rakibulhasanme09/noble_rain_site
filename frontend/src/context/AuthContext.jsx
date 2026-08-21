@@ -26,13 +26,30 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Stores an already-obtained auth payload (e.g. from OTP verification,
+    // which returns the same {_id, name, email, isAdmin, token, ...} shape
+    // as /api/auth/login) without an extra login round-trip.
+    const setAuthData = (data) => {
+        setUser(data);
+        localStorage.setItem('userInfo', JSON.stringify(data));
+    };
+
+    // Merges partial fields (e.g. after a profile update) into the stored user.
+    const updateUser = (partialData) => {
+        setUser((prev) => {
+            const next = { ...prev, ...partialData };
+            localStorage.setItem('userInfo', JSON.stringify(next));
+            return next;
+        });
+    };
+
     const logout = () => {
         setUser(null);
         localStorage.removeItem('userInfo');
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, loading, setAuthData, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

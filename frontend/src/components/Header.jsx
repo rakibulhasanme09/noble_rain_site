@@ -1,20 +1,41 @@
-import React, { useContext } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useContext, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
+
+const DashboardIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 448 512" fill="currentColor">
+        <path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm89.6 32h-16.7c-22.2 10.2-46.9 16-72.9 16s-50.6-5.8-72.9-16h-16.7C60.2 288 0 348.2 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-74.2-60.2-134.4-134.4-134.4z"/>
+    </svg>
+);
+
+const SearchIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+);
 
 const Header = () => {
     const { cartItems } = useContext(CartContext);
     const { user, logout } = useContext(AuthContext);
+    const [keyword, setKeyword] = useState('');
+    const navigate = useNavigate();
 
     const cartCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
+
+    const submitSearch = (e) => {
+        e.preventDefault();
+        const trimmed = keyword.trim();
+        navigate(trimmed ? `/search?keyword=${encodeURIComponent(trimmed)}` : '/search');
+    };
 
     return (
         <header style={styles.header}>
             <div className="container" style={styles.container}>
                 <Link to="/" style={{
-                    ...styles.logo, 
-                    display: 'flex', 
+                    ...styles.logo,
+                    display: 'flex',
                     alignItems: 'center',
                     height: '55px',
                     overflow: 'hidden'
@@ -26,6 +47,19 @@ const Header = () => {
                         mixBlendMode: 'multiply'
                     }} />
                 </Link>
+                <form onSubmit={submitSearch} className="header-search-form" style={styles.searchForm}>
+                    <input
+                        type="text"
+                        value={keyword}
+                        onChange={(e) => setKeyword(e.target.value)}
+                        placeholder="Search products..."
+                        style={styles.searchInput}
+                        aria-label="Search products"
+                    />
+                    <button type="submit" style={styles.searchBtn} aria-label="Search">
+                        <SearchIcon />
+                    </button>
+                </form>
                 <nav style={styles.nav}>
                     <Link to="/cart" style={{...styles.link, display: 'flex', alignItems: 'center'}}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -37,20 +71,13 @@ const Header = () => {
                     </Link>
                     {user ? (
                         <>
-                            <Link to="/dashboard" style={{...styles.link, color: 'var(--color-header-text)', display: 'flex', alignItems: 'center'}} title="Dashboard">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="3" y="3" width="7" height="9" rx="1" ry="1"></rect>
-                                    <rect x="14" y="3" width="7" height="9" rx="1" ry="1"></rect>
-                                    <rect x="3" y="16" width="18" height="5" rx="1" ry="1"></rect>
-                                </svg>
+                            <Link
+                                to={user.isAdmin ? '/admin' : '/dashboard'}
+                                style={{...styles.link, color: 'var(--color-header-text)', display: 'flex', alignItems: 'center'}}
+                                title={user.isAdmin ? 'Admin Dashboard' : 'Customer Dashboard'}
+                            >
+                                <DashboardIcon />
                             </Link>
-                            {user.isAdmin && (
-                                <Link to="/admin" style={{...styles.link, color: 'var(--color-header-text)', display: 'flex', alignItems: 'center'}} title="Admin">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 448 512" fill="currentColor">
-                                        <path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm89.6 32h-16.7c-22.2 10.2-46.9 16-72.9 16s-50.6-5.8-72.9-16h-16.7C60.2 288 0 348.2 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-74.2-60.2-134.4-134.4-134.4z"/>
-                                    </svg>
-                                </Link>
-                            )}
                             <button onClick={logout} className="btn" style={{ marginLeft: '1rem', border: 'none', backgroundColor: 'rgba(0,0,0,0.1)', color: 'var(--color-header-text)' }}>Logout</button>
                         </>
                     ) : (
@@ -77,6 +104,8 @@ const styles = {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '0.5rem',
     },
     logo: {
         fontSize: '1.5rem',
@@ -87,6 +116,45 @@ const styles = {
     nav: {
         display: 'flex',
         alignItems: 'center',
+    },
+    searchForm: {
+        display: 'flex',
+        alignItems: 'stretch',
+        flex: '1 1 auto',
+        minWidth: 0,
+        maxWidth: '400px',
+        margin: '0 1.5rem',
+        height: '40px',
+    },
+    searchInput: {
+        flex: 1,
+        minWidth: 0,
+        boxSizing: 'border-box',
+        height: '100%',
+        margin: 0,
+        padding: '0 0.9rem',
+        borderRadius: '20px 0 0 20px',
+        border: '1px solid var(--color-border)',
+        borderRight: 'none',
+        backgroundColor: 'var(--color-bg-main)',
+        color: 'var(--color-text-main)',
+        outline: 'none',
+        fontSize: '0.9rem',
+    },
+    searchBtn: {
+        boxSizing: 'border-box',
+        height: '100%',
+        margin: 0,
+        lineHeight: 'normal',
+        padding: '0 0.9rem',
+        borderRadius: '0 20px 20px 0',
+        border: '1px solid var(--color-border)',
+        backgroundColor: 'var(--color-bg-subtle)',
+        color: 'var(--color-text-main)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     link: {
         marginLeft: '1.5rem',

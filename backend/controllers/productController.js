@@ -1,11 +1,67 @@
 const Product = require('../models/Product');
 
-// @desc    Fetch all products
-// @route   GET /api/products
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// costPrice is wholesale cost, not something anonymous shoppers or customers
+// should see on the public storefront - only admins get it back.
+const sanitizeProduct = (product, isAdmin) => {
+    if (isAdmin) return product;
+    const { costPrice, ...rest } = product.toObject ? product.toObject() : product;
+    return rest;
+};
+
+const SORT_OPTIONS = {
+    price_asc: { price: 1 },
+    price_desc: { price: -1 },
+    rating: { rating: -1 },
+    newest: { createdAt: -1 },
+};
+
+// @desc    Fetch products, optionally filtered by keyword/category/price/
+//          sale/stock and sorted; paginated when pageNumber is supplied
+//          (existing callers that don't pass pageNumber keep getting a
+//          plain array back).
+// @route   GET /api/products?keyword=&category=&minPrice=&maxPrice=&onSale=&inStock=&sort=&pageNumber=&pageSize=
 // @access  Public
 const getProducts = async (req, res) => {
-    const products = await Product.find({});
-    res.json(products);
+    const keyword = req.query.keyword
+        ? {
+              $or: [
+                  { name: { $regex: escapeRegex(req.query.keyword), $options: 'i' } },
+                  { description: { $regex: escapeRegex(req.query.keyword), $options: 'i' } },
+                  { brand: { $regex: escapeRegex(req.query.keyword), $options: 'i' } },
+                  { category: { $regex: escapeRegex(req.query.keyword), $options: 'i' } },
+              ],
+          }
+        : {};
+
+    const category = req.query.category && req.query.category !== 'All'
+        ? { category: { $regex: `^${escapeRegex(req.query.category)}$`, $options: 'i' } }
+        : {};
+
+    const price = {};
+    if (req.query.minPrice) price.$gte = Number(req.query.minPrice);
+    if (req.query.maxPrice) price.$lte = Number(req.query.maxPrice);
+
+    const onSale = req.query.onSale === 'true' ? { discountPercentage: { $gt: 0 } } : {};
+    const inStock = req.query.inStock === 'true' ? { countInStock: { $gt: 0 } } : {};
+
+    const filter = { ...keyword, ...category, ...(Object.keys(price).length ? { price } : {}), ...onSale, ...inStock };
+    const sort = SORT_OPTIONS[req.query.sort] || SORT_OPTIONS.newest;
+    const isAdmin = !!(req.user && req.user.isAdmin);
+
+    if (req.query.pageNumber) {
+        const pageSize = Math.min(Number(req.query.pageSize) || 12, 48);
+        const page = Math.max(Number(req.query.pageNumber) || 1, 1);
+
+        const count = await Product.countDocuments(filter);
+        const products = await Product.find(filter).sort(sort).limit(pageSize).skip(pageSize * (page - 1));
+
+        return res.json({ products: products.map((p) => sanitizeProduct(p, isAdmin)), page, pages: Math.ceil(count / pageSize), count });
+    }
+
+    const products = await Product.find(filter).sort(sort);
+    res.json(products.map((p) => sanitizeProduct(p, isAdmin)));
 };
 
 // @desc    Fetch single product
@@ -15,7 +71,7 @@ const getProductById = async (req, res) => {
     const product = await Product.findById(req.params.id);
 
     if (product) {
-        res.json(product);
+        res.json(sanitizeProduct(product, req.user && req.user.isAdmin));
     } else {
         res.status(404);
         throw new Error('Product not found');
@@ -30,9 +86,9 @@ const createProduct = async (req, res) => {
 
     const imageList = (images && images.length > 0) ? images : (image ? [image] : []);
 
-    if (!name || imageList.length === 0 || !brand || !category || !description) {
+    if (!name || imageList.length === 0 || !category) {
         res.status(400);
-        throw new Error('Name, at least one image, brand, category, and description are required');
+        throw new Error('Name, at least one image, and category are required');
     }
 
     const product = new Product({
@@ -42,11 +98,11 @@ const createProduct = async (req, res) => {
         discountPercentage: discountPercentage || 0,
         user: req.user._id,
         images: imageList,
-        brand,
+        brand: brand || '',
         category,
         countInStock: countInStock || 0,
         weight: weight || 0.5,
-        description,
+        description: description || '',
     });
 
     const createdProduct = await product.save();

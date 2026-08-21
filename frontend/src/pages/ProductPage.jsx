@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import { CartContext } from '../context/CartContext';
+import { AuthContext } from '../context/AuthContext';
 import ProductReviews from '../components/ProductReviews';
 import OrderViaMessenger from '../components/OrderViaMessenger';
 import PolicyModal from '../components/PolicyModal';
@@ -10,6 +12,20 @@ const ProductPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { addToCart } = useContext(CartContext);
+    const { user } = useContext(AuthContext);
+    const [addingToWishlist, setAddingToWishlist] = useState(false);
+
+    const addToWishlist = async () => {
+        setAddingToWishlist(true);
+        try {
+            const config = { headers: { Authorization: `Bearer ${user.token}` } };
+            await axios.post(`/api/users/wishlist/${id}`, {}, config);
+            toast.success('Added to wishlist!');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to add to wishlist');
+        }
+        setAddingToWishlist(false);
+    };
 
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -18,12 +34,12 @@ const ProductPage = () => {
     const [selectedImage, setSelectedImage] = useState(null);
 
     // Placeholder data
-    const dummyProducts = [
-        { _id: '60d5ecb54d24a04d2c88f111', name: 'Premium Leather Tote', price: 5000, image: 'https://via.placeholder.com/600x800?text=Premium+Tote', description: 'Crafted from full-grain leather, this tote is spacious enough for your essentials and elegant enough for any occasion.', countInStock: 5 },
-        { _id: '60d5ecb54d24a04d2c88f112', name: 'Classic Office Briefcase', price: 6500, image: 'https://via.placeholder.com/600x800?text=Office+Briefcase', description: 'A sleek, professional briefcase designed to keep your documents and laptop secure while elevating your work style.', countInStock: 2 },
-        { _id: '60d5ecb54d24a04d2c88f113', name: 'Weekend Duffle Bag', price: 4200, image: 'https://via.placeholder.com/600x800?text=Duffle+Bag', description: 'Perfect for quick getaways. Features durable canvas with leather accents and a spacious interior.', countInStock: 10 },
-        { _id: '60d5ecb54d24a04d2c88f114', name: 'Minimalist Crossbody', price: 3200, image: 'https://via.placeholder.com/600x800?text=Crossbody', description: 'Keep your hands free with this minimalist crossbody bag. Ideal for daily commutes and casual outings.', countInStock: 0 },
-    ];
+    // const dummyProducts = [
+    //     { _id: '60d5ecb54d24a04d2c88f111', name: 'Premium Leather Tote', price: 5000, image: 'https://via.placeholder.com/600x800?text=Premium+Tote', description: 'Crafted from full-grain leather, this tote is spacious enough for your essentials and elegant enough for any occasion.', countInStock: 5 },
+    //     { _id: '60d5ecb54d24a04d2c88f112', name: 'Classic Office Briefcase', price: 6500, image: 'https://via.placeholder.com/600x800?text=Office+Briefcase', description: 'A sleek, professional briefcase designed to keep your documents and laptop secure while elevating your work style.', countInStock: 2 },
+    //     { _id: '60d5ecb54d24a04d2c88f113', name: 'Weekend Duffle Bag', price: 4200, image: 'https://via.placeholder.com/600x800?text=Duffle+Bag', description: 'Perfect for quick getaways. Features durable canvas with leather accents and a spacious interior.', countInStock: 10 },
+    //     { _id: '60d5ecb54d24a04d2c88f114', name: 'Minimalist Crossbody', price: 3200, image: 'https://via.placeholder.com/600x800?text=Crossbody', description: 'Keep your hands free with this minimalist crossbody bag. Ideal for daily commutes and casual outings.', countInStock: 0 },
+    // ];
 
     const fetchProduct = useCallback(async () => {
         try {
@@ -70,7 +86,7 @@ const ProductPage = () => {
         <div className="container animate-fade-in" style={styles.page}>
             <Link to="/" style={styles.backLink}>&larr; Back to Shop</Link>
 
-            <div style={styles.grid}>
+            <div className="product-detail-grid" style={styles.grid}>
                 {/* Image Section */}
                 <div style={styles.imageCol}>
                     <div style={styles.mainImageWrapper}>
@@ -99,9 +115,14 @@ const ProductPage = () => {
                 <div style={{...styles.detailsCol, textAlign: 'center'}}>
                     <h1 style={styles.title}>{product.name}</h1>
                     {product.discountPercentage > 0 ? (
-                        <div style={{display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center'}}>
-                            <p style={{...styles.price, color: 'var(--color-text-muted)', textDecoration: 'line-through', fontSize: '1.2rem'}}>৳{product.price}</p>
-                            <p style={styles.price}>৳{Math.round(product.price * (1 - product.discountPercentage / 100))}</p>
+                        <div>
+                            <div style={{display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center'}}>
+                                <p style={{...styles.price, color: 'var(--color-text-muted)', textDecoration: 'line-through', fontSize: '1.2rem'}}>৳{product.price}</p>
+                                <p style={styles.price}>৳{Math.round(product.price * (1 - product.discountPercentage / 100))}</p>
+                            </div>
+                            <p style={{ color: '#28a745', fontWeight: '600', marginTop: '-1rem', marginBottom: '1.5rem' }}>
+                                Save ৳{(product.price - Math.round(product.price * (1 - product.discountPercentage / 100))).toFixed(0)}
+                            </p>
                         </div>
                     ) : (
                         <div style={{display: 'flex', justifyContent: 'center'}}>
@@ -116,12 +137,12 @@ const ProductPage = () => {
                         </span>
                     </div>
 
-                    {product.countInStock > 0 && (
+                    {product.countInStock > 0 ? (
                         <div style={styles.actionRow}>
                             <div className="input-group" style={{marginBottom: 0, marginRight: '1rem'}}>
-                                <select 
+                                <select
                                     style={styles.select}
-                                    value={qty} 
+                                    value={qty}
                                     onChange={(e) => setQty(e.target.value)}
                                 >
                                     {[...Array(product.countInStock).keys()].map((x) => (
@@ -131,8 +152,8 @@ const ProductPage = () => {
                                     ))}
                                 </select>
                             </div>
-                            <button 
-                                className="btn btn-outline" 
+                            <button
+                                className="btn btn-outline"
                                 onClick={handleAddToCart}
                                 style={{flex: 1, marginRight: '1rem', borderColor: '#c09f6e', color: '#c09f6e'}}
                             >
@@ -144,6 +165,17 @@ const ProductPage = () => {
                                 style={{flex: 1}}
                             >
                                 Buy Now
+                            </button>
+                        </div>
+                    ) : user && (
+                        <div style={styles.actionRow}>
+                            <button
+                                className="btn btn-outline"
+                                onClick={addToWishlist}
+                                disabled={addingToWishlist}
+                                style={{flex: 1, borderColor: '#c09f6e', color: '#c09f6e'}}
+                            >
+                                {addingToWishlist ? 'Adding...' : 'Add to Wishlist'}
                             </button>
                         </div>
                     )}

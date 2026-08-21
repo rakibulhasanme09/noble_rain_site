@@ -34,6 +34,14 @@ const CheckoutPage = () => {
         if (user) {
             setGuestName(user.name);
             setGuestEmail(user.email);
+            if (user.phone) setGuestPhone(user.phone);
+            const savedAddress = user.defaultShippingAddress;
+            if (savedAddress) {
+                if (savedAddress.address) setAddress(savedAddress.address);
+                if (savedAddress.city) setCity(savedAddress.city);
+                if (savedAddress.postalCode) setPostalCode(savedAddress.postalCode);
+                if (savedAddress.country) setCountry(savedAddress.country);
+            }
         }
     }, [user]);
 

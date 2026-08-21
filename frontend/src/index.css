@@ -87,6 +87,15 @@ button {
   padding: 0 var(--spacing-sm);
 }
 
+/* Wider than .container (which the grid, capped at 3 columns, doesn't need
+   the full 1600px+ for) but still centered - the sidebar should sit right
+   next to the product cards, not pinned to the raw browser edge. */
+.container-wide {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-sm);
+}
+
 .btn {
   display: inline-block;
   padding: 0.8rem 1.5rem;
@@ -165,6 +174,34 @@ select:focus {
   gap: 1rem;
 }
 
+/* Catalog layout: filter sidebar on the left, products on the right */
+.shop-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 2.5rem;
+}
+
+.filter-sidebar {
+  display: flex;
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.filter-sidebar input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  width: 16px;
+  height: 16px;
+}
+
+.filter-toggle-btn {
+  display: none;
+}
+
+.shop-content {
+  flex: 1;
+  min-width: 0;
+}
+
 @media (max-width: 768px) {
   .flex-row-mobile-column {
     flex-direction: column;
@@ -173,29 +210,41 @@ select:focus {
   
   header .container {
     flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    gap: 0.2rem !important;
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
   }
-  
+
   header nav {
     flex-wrap: nowrap !important;
     justify-content: flex-end;
     gap: 0.5rem !important;
   }
-  
+
   header nav > * {
     margin-left: 0.8rem !important;
     font-size: 0.9rem;
   }
-  
+
   header {
     padding: 0.5rem !important;
   }
 
-  .container {
+  header .header-search-form {
+    order: 3;
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+    margin: 0.3rem 0 0 0 !important;
+  }
+
+  header .header-search-form input {
+    font-size: 16px !important;
+  }
+
+  .container,
+  .container-wide {
     padding: 0 1rem;
   }
-  
+
   .product-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
   }
@@ -219,5 +268,42 @@ select:focus {
   footer .container > div:first-child {
     grid-template-columns: 1fr 1fr !important;
     gap: 2rem !important;
+  }
+
+  .product-detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .shop-layout {
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+
+  .filter-sidebar {
+    display: none !important;
+    width: 100% !important;
+  }
+
+  .filter-sidebar.mobile-open {
+    display: flex !important;
+  }
+
+  .filter-toggle-btn {
+    display: inline-flex !important;
+  }
+
+  .modal-overlay {
+    padding: 1rem !important;
+  }
+
+  .modal-content {
+    padding: 1.5rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .container,
+  .container-wide {
+    padding: 0 0.75rem;
   }
 }

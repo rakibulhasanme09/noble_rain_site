@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import ChangePasswordForm from '../components/ChangePasswordForm';
 
 const AdminDashboard = () => {
     const { user, loading: authLoading } = useContext(AuthContext);
@@ -17,13 +18,17 @@ const AdminDashboard = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [dispatchCourier, setDispatchCourier] = useState({});
+    const now = new Date();
+    const [reportStartDate, setReportStartDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]);
+    const [reportEndDate, setReportEndDate] = useState(now.toISOString().split('T')[0]);
+    const [generatingReport, setGeneratingReport] = useState(false);
 
     const [couponForm, setCouponForm] = useState({
         code: '', discountType: 'percentage', discountValue: '', minPurchase: '', usageLimit: '', expiryDate: ''
     });
     const [creatingCoupon, setCreatingCoupon] = useState(false);
 
-    const [policiesForm, setPoliciesForm] = useState({ shippingPolicy: '', returnPolicy: '' });
+    const [policiesForm, setPoliciesForm] = useState({ shippingPolicy: '', returnPolicy: '', privacyPolicy: '', termsOfService: '' });
     const [savingPolicies, setSavingPolicies] = useState(false);
 
     const [newCategoryName, setNewCategoryName] = useState('');
@@ -68,7 +73,7 @@ const AdminDashboard = () => {
                 const config = { headers: { Authorization: `Bearer ${user.token}` } };
                 const [{ data: ordersData }, { data: productsData }, { data: usersData }, { data: revenueData }, { data: couponsData }, { data: policiesData }, { data: categoriesData }] = await Promise.all([
                     axios.get('/api/orders', config),
-                    axios.get('/api/products'),
+                    axios.get('/api/products', config),
                     axios.get('/api/users', config),
                     axios.get('/api/orders/revenue', config),
                     axios.get('/api/coupons', config),
@@ -90,6 +95,23 @@ const AdminDashboard = () => {
 
         fetchData();
     }, [user, authLoading, navigate]);
+
+    const handleGenerateSalesReport = async () => {
+        if (!reportStartDate || !reportEndDate) {
+            toast.warn('Please select a start and end date');
+            return;
+        }
+        setGeneratingReport(true);
+        try {
+            const config = { headers: { Authorization: `Bearer ${user.token}` } };
+            const { data } = await axios.post('/api/orders/sales-report', { startDate: reportStartDate, endDate: reportEndDate }, config);
+            toast.success('Report generated!');
+            window.open(data.url, '_blank', 'noopener,noreferrer');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to generate report');
+        }
+        setGeneratingReport(false);
+    };
 
     const handleStatusChange = async (id, newStatus) => {
         try {
@@ -250,14 +272,23 @@ const AdminDashboard = () => {
     };
 
     // User Handlers
+    const [togglingUserId, setTogglingUserId] = useState(null);
     const handleAdminToggle = async (id, currentStatus) => {
+        if (id === user._id) {
+            toast.error("You can't change your own admin status");
+            return;
+        }
+        if (togglingUserId) return;
+        setTogglingUserId(id);
         try {
             const config = { headers: { Authorization: `Bearer ${user.token}` } };
             const { data } = await axios.put(`/api/users/${id}`, { isAdmin: !currentStatus }, config);
-            setUsers(users.map(u => u._id === id ? data : u));
+            setUsers(prevUsers => prevUsers.map(u => u._id === id ? data : u));
             toast.success('User status updated');
         } catch (error) {
-            toast.error('Failed to update user status');
+            toast.error(error.response?.data?.message || 'Failed to update user status');
+        } finally {
+            setTogglingUserId(null);
         }
     };
 
@@ -377,8 +408,8 @@ const AdminDashboard = () => {
     const submitEditHandler = async (e) => {
         e.preventDefault();
 
-        if (!editForm.name || !editForm.images || editForm.images.length === 0 || !editForm.brand || !editForm.category || !editForm.description) {
-            toast.warn('Name, at least one image, brand, category, and description are required');
+        if (!editForm.name || !editForm.images || editForm.images.length === 0 || !editForm.category) {
+            toast.warn('Name, at least one image, and category are required');
             return;
         }
 
@@ -854,10 +885,17 @@ const AdminDashboard = () => {
                                                 <td><a href={`mailto:${u.email}`}>{u.email}</a></td>
                                                 <td>{u.isAdmin ? 'Yes' : 'No'}</td>
                                                 <td>
-                                                    <button className="btn btn-outline" style={{...styles.actionBtn, marginRight: '0.5rem'}} onClick={() => handleAdminToggle(u._id, u.isAdmin)}>
-                                                        {u.isAdmin ? 'Remove Admin' : 'Make Admin'}
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-outline"
+                                                        style={{...styles.actionBtn, marginRight: '0.5rem', ...(togglingUserId === u._id || u._id === user._id ? styles.disabledBtn : {})}}
+                                                        disabled={togglingUserId === u._id || u._id === user._id}
+                                                        title={u._id === user._id ? "You can't change your own admin status" : undefined}
+                                                        onClick={() => handleAdminToggle(u._id, u.isAdmin)}
+                                                    >
+                                                        {togglingUserId === u._id ? 'Updating...' : u.isAdmin ? 'Remove Admin' : 'Make Admin'}
                                                     </button>
-                                                    <button className="btn btn-outline" style={{...styles.actionBtn, borderColor: '#dc3545', color: '#dc3545'}} onClick={() => handleDeleteUser(u._id)}>Delete</button>
+                                                    <button type="button" className="btn btn-outline" style={{...styles.actionBtn, borderColor: '#dc3545', color: '#dc3545'}} onClick={() => handleDeleteUser(u._id)}>Delete</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -869,6 +907,21 @@ const AdminDashboard = () => {
                 ) : activeTab === 'revenue' && revenueStats ? (
                     <>
                         <h2 style={styles.sectionTitle}>Revenue Analytics</h2>
+
+                        <div style={{display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '2rem', padding: '1.5rem', backgroundColor: 'var(--color-bg-subtle)', borderRadius: '8px', border: '1px solid var(--color-border)'}}>
+                            <div className="input-group" style={{marginBottom: 0}}>
+                                <label>Start Date</label>
+                                <input type="date" value={reportStartDate} onChange={e => setReportStartDate(e.target.value)} />
+                            </div>
+                            <div className="input-group" style={{marginBottom: 0}}>
+                                <label>End Date</label>
+                                <input type="date" value={reportEndDate} min={reportStartDate} onChange={e => setReportEndDate(e.target.value)} />
+                            </div>
+                            <button className="btn btn-primary" onClick={handleGenerateSalesReport} disabled={generatingReport}>
+                                {generatingReport ? 'Generating...' : 'Generate Sales Report (Google Sheets)'}
+                            </button>
+                        </div>
+
                         <div style={{display: 'flex', gap: '2rem', marginBottom: '2rem', flexWrap: 'wrap'}}>
                             <div style={styles.statCard}>
                                 <h3>Total Revenue</h3>
@@ -1097,10 +1150,32 @@ const AdminDashboard = () => {
                                     placeholder="One point per line..."
                                 />
                             </div>
+                            <div className="input-group">
+                                <label>Privacy Policy</label>
+                                <textarea
+                                    rows="10"
+                                    value={policiesForm.privacyPolicy}
+                                    onChange={e => setPoliciesForm({...policiesForm, privacyPolicy: e.target.value})}
+                                    placeholder="Lines starting with '1. ', '2. ', etc. render as section headings..."
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label>Terms of Service</label>
+                                <textarea
+                                    rows="10"
+                                    value={policiesForm.termsOfService}
+                                    onChange={e => setPoliciesForm({...policiesForm, termsOfService: e.target.value})}
+                                    placeholder="Lines starting with '1. ', '2. ', etc. render as section headings..."
+                                />
+                            </div>
                             <button type="submit" className="btn btn-primary" disabled={savingPolicies}>
                                 {savingPolicies ? 'Saving...' : 'Save Policies'}
                             </button>
                         </form>
+
+                        <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--color-border)' }}>
+                            <ChangePasswordForm />
+                        </div>
                     </>
                 ) : (
                     <>
@@ -1149,8 +1224,8 @@ const AdminDashboard = () => {
 
             {/* Delete Confirm Modal */}
             {confirmModal.isOpen && (
-                <div style={styles.modalOverlay}>
-                    <div style={{...styles.modalContent, maxWidth: '400px', textAlign: 'center'}}>
+                <div className="modal-overlay" style={styles.modalOverlay}>
+                    <div className="modal-content" style={{...styles.modalContent, maxWidth: '400px', textAlign: 'center'}}>
                         <h2 style={{color: 'var(--color-text-main)'}}>{confirmModal.title}</h2>
                         <p style={{margin: '1.5rem 0', color: 'var(--color-text-muted)'}}>{confirmModal.message}</p>
                         <div style={{display: 'flex', gap: '1rem', justifyContent: 'center'}}>
@@ -1163,8 +1238,8 @@ const AdminDashboard = () => {
 
             {/* Edit Order Modal */}
             {showOrderEditModal && orderEditForm && (
-                <div style={styles.modalOverlay}>
-                    <div style={{...styles.modalContent, maxWidth: '760px'}}>
+                <div className="modal-overlay" style={styles.modalOverlay}>
+                    <div className="modal-content" style={{...styles.modalContent, maxWidth: '760px'}}>
                         <h2>Edit Order {editingOrder._id.substring(0, 8).toUpperCase()}</h2>
                         <form onSubmit={submitOrderEditHandler} style={{marginTop: '1.5rem'}}>
 
@@ -1272,8 +1347,8 @@ const AdminDashboard = () => {
 
             {/* Edit Product Modal */}
             {showEditModal && (
-                <div style={styles.modalOverlay}>
-                    <div style={styles.modalContent}>
+                <div className="modal-overlay" style={styles.modalOverlay}>
+                    <div className="modal-content" style={styles.modalContent}>
                         <h2>{isNewProduct ? 'Create Product' : 'Edit Product'}</h2>
                         <form onSubmit={submitEditHandler} style={{marginTop: '1.5rem'}}>
                             <div className="input-group">
@@ -1333,7 +1408,7 @@ const AdminDashboard = () => {
                             </div>
                             <div className="input-group flex-row-mobile-column">
                                 <div style={{flex: 1}}>
-                                    <label>Brand</label>
+                                    <label>Brand (optional)</label>
                                     <input type="text" value={editForm.brand} onChange={e => setEditForm({...editForm, brand: e.target.value})} />
                                 </div>
                                 <div style={{flex: 1}}>
@@ -1347,7 +1422,7 @@ const AdminDashboard = () => {
                                 </div>
                             </div>
                             <div className="input-group">
-                                <label>Description</label>
+                                <label>Description (optional)</label>
                                 <textarea rows="3" value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})}></textarea>
                             </div>
                             
@@ -1426,6 +1501,10 @@ const styles = {
     actionBtn: {
         padding: '0.4rem 0.8rem',
         fontSize: '0.85rem',
+    },
+    disabledBtn: {
+        opacity: 0.5,
+        cursor: 'not-allowed',
     },
     statusSuccess: {
         color: '#28a745',

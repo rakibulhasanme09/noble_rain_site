@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import ProductGrid from '../components/ProductGrid';
 import ProductFilterBar, { DEFAULT_PRODUCT_FILTERS } from '../components/ProductFilterBar';
 import Pagination from '../components/Pagination';
 
-const HomePage = () => {
+const SearchPage = () => {
+    const [searchParams] = useSearchParams();
+    const keyword = searchParams.get('keyword') || '';
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [categories, setCategories] = useState(['All']);
@@ -24,11 +27,18 @@ const HomePage = () => {
         fetchCategories();
     }, []);
 
+    // A new keyword is a fresh search - reset filters/page rather than
+    // carrying over an unrelated category/price range from before.
+    useEffect(() => {
+        setFilters(DEFAULT_PRODUCT_FILTERS);
+        setPage(1);
+    }, [keyword]);
+
     useEffect(() => {
         const fetchProducts = async () => {
             setLoading(true);
             try {
-                const params = new URLSearchParams({ pageNumber: page, sort: filters.sort });
+                const params = new URLSearchParams({ pageNumber: page, sort: filters.sort, keyword });
                 if (filters.category !== 'All') params.set('category', filters.category);
                 if (filters.minPrice) params.set('minPrice', filters.minPrice);
                 if (filters.maxPrice) params.set('maxPrice', filters.maxPrice);
@@ -45,7 +55,7 @@ const HomePage = () => {
             }
         };
         fetchProducts();
-    }, [filters, page]);
+    }, [keyword, filters, page]);
 
     const handleFiltersChange = (next) => {
         setFilters(next);
@@ -53,18 +63,23 @@ const HomePage = () => {
     };
 
     return (
-        <div className="home-page animate-fade-in">
-            <section id="collection" style={styles.collectionSection}>
+        <div className="search-page animate-fade-in">
+            <section style={styles.collectionSection}>
                 <div className="container-wide">
-                    <h2 style={styles.sectionTitle}>Featured Products</h2>
+                    <h2 style={styles.sectionTitle}>
+                        {keyword ? `Search results for "${keyword}"` : 'All Products'}
+                    </h2>
                     <div className="shop-layout">
                         <ProductFilterBar categories={categories} filters={filters} onChange={handleFiltersChange} />
                         <div className="shop-content">
                             {loading ? (
-                                <p style={{ textAlign: 'center' }}>Loading premium collection...</p>
+                                <p style={{ textAlign: 'center' }}>Searching...</p>
                             ) : (
                                 <>
-                                    <ProductGrid products={products} emptyMessage="No products match your filters." />
+                                    <ProductGrid
+                                        products={products}
+                                        emptyMessage={keyword ? `No products found matching "${keyword}".` : 'No products found.'}
+                                    />
                                     <Pagination page={page} pages={pages} onPageChange={setPage} />
                                 </>
                             )}
@@ -89,4 +104,4 @@ const styles = {
     },
 };
 
-export default HomePage;
+export default SearchPage;
