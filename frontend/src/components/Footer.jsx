@@ -97,12 +97,19 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: '1rem',
+        minWidth: 0,
+        // confines the logo's mix-blend-mode to this stacking context, which
+        // keeps iOS Safari from mis-compositing it onto the page behind
+        isolation: 'isolate',
     },
     logo: {
         height: '38px',
+        width: 'auto',
+        maxWidth: '100%',
         objectFit: 'contain',
         mixBlendMode: 'multiply',
-        width: 'fit-content',
+        alignSelf: 'flex-start',
+        flexShrink: 0,
     },
     tagline: {
         color: 'var(--color-text-muted)',
@@ -129,6 +136,7 @@ const styles = {
     col: {
         display: 'flex',
         flexDirection: 'column',
+        minWidth: 0,
     },
     colTitle: {
         fontSize: '0.95rem',
@@ -143,17 +151,20 @@ const styles = {
     link: {
         color: 'var(--color-text-muted)',
         fontSize: '0.9rem',
+        overflowWrap: 'anywhere',
     },
     linkBtn: {
         color: 'var(--color-text-muted)',
         fontSize: '0.9rem',
         textAlign: 'left',
         padding: 0,
+        overflowWrap: 'anywhere',
     },
     contactItem: {
         color: 'var(--color-text-muted)',
         fontSize: '0.9rem',
         lineHeight: 1.6,
+        overflowWrap: 'anywhere',
     },
     bottomBar: {
         borderTop: '1px solid var(--color-border)',
