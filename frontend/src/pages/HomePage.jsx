@@ -3,8 +3,10 @@ import axios from 'axios';
 import ProductGrid from '../components/ProductGrid';
 import ProductFilterBar, { DEFAULT_PRODUCT_FILTERS } from '../components/ProductFilterBar';
 import Pagination from '../components/Pagination';
+import BagsScrollSection from '../components/BagsScrollSection';
+import VideoHero from '../components/VideoHero';
 
-const HomePage = () => {
+const HomePage = ({ headerHeight = 0 }) => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [categories, setCategories] = useState(['All']);
@@ -54,7 +56,9 @@ const HomePage = () => {
 
     return (
         <div className="home-page animate-fade-in">
-            <section id="collection" style={styles.collectionSection}>
+            <VideoHero />
+            <BagsScrollSection headerHeight={headerHeight} />
+            <section id="collection" style={{ ...styles.collectionSection, scrollMarginTop: headerHeight }}>
                 <div className="container-wide">
                     <h2 style={styles.sectionTitle}>Featured Products</h2>
                     <div className="shop-layout">

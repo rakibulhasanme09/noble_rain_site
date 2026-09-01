@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { forwardRef, useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
@@ -16,7 +16,7 @@ const SearchIcon = () => (
     </svg>
 );
 
-const Header = () => {
+const Header = forwardRef((props, ref) => {
     const { cartItems } = useContext(CartContext);
     const { user, logout } = useContext(AuthContext);
     const [keyword, setKeyword] = useState('');
@@ -31,7 +31,7 @@ const Header = () => {
     };
 
     return (
-        <header style={styles.header}>
+        <header ref={ref} style={styles.header}>
             <div className="container" style={styles.container}>
                 <Link to="/" style={{
                     ...styles.logo,
@@ -87,7 +87,7 @@ const Header = () => {
             </div>
         </header>
     );
-};
+});
 
 const styles = {
     header: {
@@ -95,9 +95,11 @@ const styles = {
         color: 'var(--color-header-text)',
         borderBottom: '1px solid var(--color-border)',
         padding: '0.5rem 2rem',
-        position: 'sticky',
+        position: 'fixed',
         top: 0,
-        zIndex: 100,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
         boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
     },
     container: {
