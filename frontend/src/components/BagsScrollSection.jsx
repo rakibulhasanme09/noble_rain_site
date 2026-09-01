@@ -39,15 +39,15 @@ const BagsScrollSection = ({ headerHeight = 0 }) => {
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
-        const fetchFeatured = async () => {
+        const fetchTopSellers = async () => {
             try {
-                const { data } = await axios.get('/api/products?sort=rating&pageNumber=1&pageSize=3');
-                setProducts(data.products || []);
+                const { data } = await axios.get('/api/products?topSeller=true');
+                setProducts(data || []);
             } catch (error) {
-                console.error('Error fetching featured products', error);
+                console.error('Error fetching top seller products', error);
             }
         };
-        fetchFeatured();
+        fetchTopSellers();
     }, []);
 
     useEffect(() => {
@@ -72,7 +72,6 @@ const BagsScrollSection = ({ headerHeight = 0 }) => {
     if (products.length === 0) return null;
 
     const n = products.length;
-    const eyebrows = ['Best Seller', 'Top Rated', 'Staff Pick'];
     const activeIndex = Math.min(n - 1, Math.floor(progress * n));
 
     const buyNow = (product) => {
@@ -123,9 +122,7 @@ const BagsScrollSection = ({ headerHeight = 0 }) => {
                         >
                             <img src={image} alt={product.name} className="bags-product-image" style={styles.image} />
                             <div className="bags-product-details">
-                                <p style={styles.eyebrow}>
-                                    {eyebrows[i] || 'Featured'} · #{i + 1} in {product.category}
-                                </p>
+                                <p style={styles.eyebrow}>Top Seller · {product.category}</p>
                                 <h3 className="bags-product-name" style={styles.name}>{product.name}</h3>
                                 <p style={styles.description}>
                                     {product.description}

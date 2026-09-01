@@ -31,6 +31,10 @@ const AdminDashboard = () => {
     const [policiesForm, setPoliciesForm] = useState({ shippingPolicy: '', returnPolicy: '', privacyPolicy: '', termsOfService: '' });
     const [savingPolicies, setSavingPolicies] = useState(false);
 
+    const [heroVideoForm, setHeroVideoForm] = useState({ heroVideo: '' });
+    const [uploadingVideo, setUploadingVideo] = useState(false);
+    const [savingHeroVideo, setSavingHeroVideo] = useState(false);
+
     const [newCategoryName, setNewCategoryName] = useState('');
     const [creatingCategory, setCreatingCategory] = useState(false);
     const [editingCategoryId, setEditingCategoryId] = useState(null);
@@ -53,11 +57,11 @@ const AdminDashboard = () => {
     const [uploading, setUploading] = useState(false);
     const [newImageUrl, setNewImageUrl] = useState('');
     const [editForm, setEditForm] = useState({
-        name: '', costPrice: 0, price: 0, images: [], brand: '', category: '', countInStock: 0, description: ''
+        name: '', costPrice: 0, price: 0, images: [], brand: '', category: '', countInStock: 0, description: '', isTopSeller: false
     });
 
     const blankProductForm = {
-        name: '', costPrice: 0, price: 0, discountPercentage: 0, images: [], brand: '', category: '', countInStock: 0, weight: 0.5, description: ''
+        name: '', costPrice: 0, price: 0, discountPercentage: 0, images: [], brand: '', category: '', countInStock: 0, weight: 0.5, description: '', isTopSeller: false
     };
 
     useEffect(() => {
@@ -71,14 +75,15 @@ const AdminDashboard = () => {
             setLoading(true);
             try {
                 const config = { headers: { Authorization: `Bearer ${user.token}` } };
-                const [{ data: ordersData }, { data: productsData }, { data: usersData }, { data: revenueData }, { data: couponsData }, { data: policiesData }, { data: categoriesData }] = await Promise.all([
+                const [{ data: ordersData }, { data: productsData }, { data: usersData }, { data: revenueData }, { data: couponsData }, { data: policiesData }, { data: categoriesData }, { data: homepageData }] = await Promise.all([
                     axios.get('/api/orders', config),
                     axios.get('/api/products', config),
                     axios.get('/api/users', config),
                     axios.get('/api/orders/revenue', config),
                     axios.get('/api/coupons', config),
                     axios.get('/api/settings/policies'),
-                    axios.get('/api/categories')
+                    axios.get('/api/categories'),
+                    axios.get('/api/settings/homepage')
                 ]);
                 setOrders(ordersData);
                 setProducts(productsData);
@@ -87,6 +92,7 @@ const AdminDashboard = () => {
                 setCoupons(couponsData);
                 setPoliciesForm(policiesData);
                 setCategories(categoriesData);
+                setHeroVideoForm(homepageData);
             } catch (error) {
                 console.error('Error fetching admin data', error);
             }
@@ -365,6 +371,7 @@ const AdminDashboard = () => {
             countInStock: product.countInStock,
             weight: product.weight || 0.5,
             description: product.description,
+            isTopSeller: !!product.isTopSeller,
         });
         setShowEditModal(true);
     };
@@ -556,6 +563,44 @@ const AdminDashboard = () => {
             toast.error(error.response?.data?.message || 'Failed to update policies');
         }
         setSavingPolicies(false);
+    };
+
+    const uploadHeroVideoHandler = async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('video', file);
+        setUploadingVideo(true);
+
+        try {
+            const config = {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    Authorization: `Bearer ${user.token}`
+                }
+            };
+            const { data } = await axios.post('/api/upload/video', formData, config);
+            setHeroVideoForm({ heroVideo: data.videoUrl });
+            toast.success('Video uploaded. Click Save to publish it to the homepage.');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Video upload failed');
+        }
+        setUploadingVideo(false);
+        e.target.value = '';
+    };
+
+    const handleSaveHeroVideo = async (e) => {
+        e.preventDefault();
+        setSavingHeroVideo(true);
+        try {
+            const config = { headers: { Authorization: `Bearer ${user.token}` } };
+            const { data } = await axios.put('/api/settings/homepage', heroVideoForm, config);
+            setHeroVideoForm(data);
+            toast.success('Homepage video updated');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to update homepage video');
+        }
+        setSavingHeroVideo(false);
     };
 
     return (
@@ -1130,6 +1175,26 @@ const AdminDashboard = () => {
                     </>
                 ) : activeTab === 'settings' ? (
                     <>
+                        <h2 style={styles.sectionTitle}>Homepage Video</h2>
+                        <form onSubmit={handleSaveHeroVideo} style={{maxWidth: '700px', marginBottom: '3rem'}}>
+                            <div className="input-group">
+                                <label>Hero Video (full-screen banner at the top of the homepage)</label>
+                                {heroVideoForm.heroVideo && (
+                                    <video
+                                        src={heroVideoForm.heroVideo}
+                                        controls
+                                        muted
+                                        style={{width: '100%', maxWidth: '360px', borderRadius: '8px', marginBottom: '0.75rem', display: 'block'}}
+                                    />
+                                )}
+                                <input type="file" accept="video/mp4,video/webm" onChange={uploadHeroVideoHandler} />
+                                {uploadingVideo && <span>Uploading...</span>}
+                            </div>
+                            <button type="submit" className="btn btn-primary" disabled={savingHeroVideo || uploadingVideo}>
+                                {savingHeroVideo ? 'Saving...' : 'Save'}
+                            </button>
+                        </form>
+
                         <h2 style={styles.sectionTitle}>Site Policies</h2>
                         <form onSubmit={handleSavePolicies} style={{maxWidth: '700px'}}>
                             <div className="input-group">
@@ -1195,6 +1260,7 @@ const AdminDashboard = () => {
                                             <th>CATEGORY</th>
                                             <th>BRAND</th>
                                             <th>STOCK</th>
+                                            <th>TOP SELLER</th>
                                             <th>ACTION</th>
                                         </tr>
                                     </thead>
@@ -1208,6 +1274,7 @@ const AdminDashboard = () => {
                                                 <td>{product.category}</td>
                                                 <td>{product.brand}</td>
                                                 <td>{product.countInStock}</td>
+                                                <td>{product.isTopSeller ? '★' : ''}</td>
                                                 <td>
                                                     <button className="btn btn-outline" style={{...styles.actionBtn, marginRight: '0.5rem'}} onClick={() => handleEditClick(product)}>Edit</button>
                                                     <button className="btn btn-outline" style={{...styles.actionBtn, borderColor: '#dc3545', color: '#dc3545'}} onClick={() => handleDeleteProduct(product._id)}>Delete</button>
@@ -1425,7 +1492,18 @@ const AdminDashboard = () => {
                                 <label>Description (optional)</label>
                                 <textarea rows="3" value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})}></textarea>
                             </div>
-                            
+                            <div className="input-group">
+                                <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
+                                    <input
+                                        type="checkbox"
+                                        checked={editForm.isTopSeller}
+                                        onChange={e => setEditForm({...editForm, isTopSeller: e.target.checked})}
+                                        style={{width: 'auto'}}
+                                    />
+                                    Top Seller (shown in the homepage scrolling section)
+                                </label>
+                            </div>
+
                             <div style={{display: 'flex', gap: '1rem', marginTop: '2rem'}}>
                                 <button type="submit" className="btn btn-primary" style={{flex: 1}}>{isNewProduct ? 'Create Product' : 'Save Changes'}</button>
                                 <button type="button" className="btn btn-outline" style={{flex: 1}} onClick={() => setShowEditModal(false)}>Cancel</button>

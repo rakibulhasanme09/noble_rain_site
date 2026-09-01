@@ -45,8 +45,9 @@ const getProducts = async (req, res) => {
 
     const onSale = req.query.onSale === 'true' ? { discountPercentage: { $gt: 0 } } : {};
     const inStock = req.query.inStock === 'true' ? { countInStock: { $gt: 0 } } : {};
+    const topSeller = req.query.topSeller === 'true' ? { isTopSeller: true } : {};
 
-    const filter = { ...keyword, ...category, ...(Object.keys(price).length ? { price } : {}), ...onSale, ...inStock };
+    const filter = { ...keyword, ...category, ...(Object.keys(price).length ? { price } : {}), ...onSale, ...inStock, ...topSeller };
     const sort = SORT_OPTIONS[req.query.sort] || SORT_OPTIONS.newest;
     const isAdmin = !!(req.user && req.user.isAdmin);
 
@@ -82,7 +83,7 @@ const getProductById = async (req, res) => {
 // @route   POST /api/products
 // @access  Private/Admin
 const createProduct = async (req, res) => {
-    const { name, costPrice, price, discountPercentage, description, image, images, brand, category, countInStock, weight } = req.body;
+    const { name, costPrice, price, discountPercentage, description, image, images, brand, category, countInStock, weight, isTopSeller } = req.body;
 
     const imageList = (images && images.length > 0) ? images : (image ? [image] : []);
 
@@ -103,6 +104,7 @@ const createProduct = async (req, res) => {
         countInStock: countInStock || 0,
         weight: weight || 0.5,
         description: description || '',
+        isTopSeller: !!isTopSeller,
     });
 
     const createdProduct = await product.save();
@@ -113,7 +115,7 @@ const createProduct = async (req, res) => {
 // @route   PUT /api/products/:id
 // @access  Private/Admin
 const updateProduct = async (req, res) => {
-    const { name, costPrice, price, discountPercentage, description, image, images, brand, category, countInStock, weight } = req.body;
+    const { name, costPrice, price, discountPercentage, description, image, images, brand, category, countInStock, weight, isTopSeller } = req.body;
 
     const product = await Product.findById(req.params.id);
 
@@ -132,6 +134,7 @@ const updateProduct = async (req, res) => {
         product.category = category || product.category;
         product.countInStock = countInStock !== undefined ? countInStock : product.countInStock;
         if (weight !== undefined) product.weight = weight;
+        if (isTopSeller !== undefined) product.isTopSeller = !!isTopSeller;
 
         const updatedProduct = await product.save();
         res.json(updatedProduct);

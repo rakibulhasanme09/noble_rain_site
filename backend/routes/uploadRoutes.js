@@ -41,4 +41,28 @@ router.post('/multiple', protect, admin, upload.array('images', 8), (req, res) =
     res.json({ imageUrls });
 });
 
+function checkVideoFileType(file, cb) {
+    const filetypes = /mp4|webm/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = /^video\/(mp4|webm)$/.test(file.mimetype);
+
+    if (extname && mimetype) {
+        return cb(null, true);
+    } else {
+        cb(new Error('Only MP4 or WebM videos are allowed'));
+    }
+}
+
+const uploadVideo = multer({
+    storage,
+    fileFilter: function(req, file, cb) {
+        checkVideoFileType(file, cb);
+    },
+    limits: { fileSize: 200 * 1024 * 1024 },
+});
+
+router.post('/video', protect, admin, uploadVideo.single('video'), (req, res) => {
+    res.json({ videoUrl: `/${req.file.path.replace(/\\/g, '/')}` });
+});
+
 module.exports = router;

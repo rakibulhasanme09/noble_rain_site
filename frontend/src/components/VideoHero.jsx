@@ -1,26 +1,46 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
-const VideoHero = () => (
-    <section className="video-hero" style={styles.section}>
-        <video
-            className="video-hero-video"
-            style={styles.video}
-            src="/hero-video.mp4"
-            autoPlay
-            muted
-            loop
-            playsInline
-        />
-        <div style={styles.overlay} />
-        <div style={styles.content}>
-            <p style={styles.eyebrow}>Noble Rain</p>
-            <h1 style={styles.heading}>Style in Motion</h1>
-            <a href="#collection" className="btn btn-primary" style={styles.cta}>
-                Shop the Collection
-            </a>
-        </div>
-    </section>
-);
+const VideoHero = () => {
+    const [heroVideo, setHeroVideo] = useState(null);
+
+    useEffect(() => {
+        const fetchHeroVideo = async () => {
+            try {
+                const { data } = await axios.get('/api/settings/homepage');
+                setHeroVideo(data.heroVideo || '');
+            } catch (error) {
+                console.error('Error fetching homepage settings', error);
+            }
+        };
+        fetchHeroVideo();
+    }, []);
+
+    if (!heroVideo) return null;
+
+    return (
+        <section className="video-hero" style={styles.section}>
+            <video
+                key={heroVideo}
+                className="video-hero-video"
+                style={styles.video}
+                src={heroVideo}
+                autoPlay
+                muted
+                loop
+                playsInline
+            />
+            <div style={styles.overlay} />
+            <div style={styles.content}>
+                <p style={styles.eyebrow}>Noble Rain</p>
+                <h1 style={styles.heading}>Style in Motion</h1>
+                <a href="#collection" className="btn btn-primary" style={styles.cta}>
+                    Shop the Collection
+                </a>
+            </div>
+        </section>
+    );
+};
 
 const styles = {
     section: {

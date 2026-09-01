@@ -23,6 +23,7 @@ const productSchema = new mongoose.Schema({
     reviews: [reviewSchema],
     rating: { type: Number, required: true, default: 0 },
     numReviews: { type: Number, required: true, default: 0 },
+    isTopSeller: { type: Boolean, required: true, default: false },
 }, { timestamps: true });
 
 productSchema.pre('validate', function() {

@@ -42,4 +42,25 @@ const updatePolicies = async (req, res) => {
     });
 };
 
-module.exports = { getPolicies, updatePolicies };
+// @desc    Get homepage settings (hero video)
+// @route   GET /api/settings/homepage
+// @access  Public
+const getHomepageSettings = async (req, res) => {
+    const settings = await getOrCreateSettings();
+    res.json({ heroVideo: settings.heroVideo });
+};
+
+// @desc    Update homepage settings (hero video)
+// @route   PUT /api/settings/homepage
+// @access  Private/Admin
+const updateHomepageSettings = async (req, res) => {
+    const { heroVideo } = req.body;
+    const settings = await getOrCreateSettings();
+
+    if (heroVideo !== undefined) settings.heroVideo = heroVideo;
+
+    const updated = await settings.save();
+    res.json({ heroVideo: updated.heroVideo });
+};
+
+module.exports = { getPolicies, updatePolicies, getHomepageSettings, updateHomepageSettings };

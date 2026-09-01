@@ -64,6 +64,7 @@ const siteSettingsSchema = new mongoose.Schema({
     returnPolicy: { type: String, default: DEFAULT_RETURN_POLICY },
     privacyPolicy: { type: String, default: DEFAULT_PRIVACY_POLICY },
     termsOfService: { type: String, default: DEFAULT_TERMS_OF_SERVICE },
+    heroVideo: { type: String, default: '/hero-video.mp4' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('SiteSettings', siteSettingsSchema);
