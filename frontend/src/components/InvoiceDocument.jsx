@@ -73,12 +73,6 @@ const InvoiceDocument = forwardRef(({ order }, ref) => {
                     {order.isPaid && order.paidAt && (
                         <p><strong>Paid On:</strong> {new Date(order.paidAt).toLocaleString()}</p>
                     )}
-                    <p>
-                        <strong>Delivery Status:</strong>{' '}
-                        <span style={{ color: order.status === 'Delivered' ? 'green' : '#ff9800', fontWeight: 'bold' }}>
-                            {order.status}
-                        </span>
-                    </p>
                     {order.couponCode && (
                         <p><strong>Coupon Applied:</strong> {order.couponCode}</p>
                     )}

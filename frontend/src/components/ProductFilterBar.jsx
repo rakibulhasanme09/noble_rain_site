@@ -128,7 +128,7 @@ const ProductFilterBar = ({ categories, filters, onChange }) => {
                             checked={filters.inStock}
                             onChange={(e) => onChange({ ...filters, inStock: e.target.checked })}
                         />
-                        In Stock Only
+                        In Stock
                     </label>
                 </div>
 

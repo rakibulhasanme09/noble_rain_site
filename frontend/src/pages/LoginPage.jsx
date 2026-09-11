@@ -138,7 +138,7 @@ const LoginPage = () => {
                                 required
                                 value={forgotEmail}
                                 onChange={(e) => setForgotEmail(e.target.value)}
-                                placeholder="name@gmail.com"
+                                placeholder="Enter your email"
                             />
                         </div>
                         <button type="submit" className="btn btn-primary" style={styles.submitBtn} disabled={submitting}>
@@ -271,7 +271,7 @@ const LoginPage = () => {
                             required 
                             value={email} 
                             onChange={(e) => setEmail(e.target.value)} 
-                            placeholder="name@gmail.com"
+                            placeholder="Enter your email"
                         />
                     </div>
                     <div className="input-group" style={{ position: 'relative' }}>
