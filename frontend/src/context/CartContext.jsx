@@ -45,8 +45,16 @@ export const CartProvider = ({ children }) => {
         localStorage.removeItem('cartItems');
     };
 
+    const updateCartItemQty = (productId, newQty) => {
+        const newCartItems = cartItems.map((x) =>
+            x.product === productId ? { ...x, qty: newQty } : x
+        );
+        setCartItems(newCartItems);
+        localStorage.setItem('cartItems', JSON.stringify(newCartItems));
+    };
+
     return (
-        <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart }}>
+        <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, updateCartItemQty }}>
             {children}
         </CartContext.Provider>
     );

@@ -57,7 +57,12 @@ const orderConfirmationEmail = (order) => ({
                     `).join('')}
                 </tbody>
             </table>
-            <p style="font-size: 1.2rem; font-weight: bold;">Total: ৳${order.totalPrice.toFixed(2)}</p>
+            <div style="text-align: right; margin-top: 1rem;">
+                <p style="margin: 0.2rem 0;">Subtotal: ৳${order.itemsPrice.toFixed(2)}</p>
+                <p style="margin: 0.2rem 0;">Shipping: ৳${order.shippingPrice.toFixed(2)}</p>
+                ${(order.discountAmount || 0) > 0 ? `<p style="margin: 0.2rem 0; color: #28a745;">Discount: -৳${order.discountAmount.toFixed(2)}</p>` : ''}
+                <p style="font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">Total: ৳${order.totalPrice.toFixed(2)}</p>
+            </div>
             <p>Your detailed invoice is attached as a PDF. We'll notify you as your order ships.</p>
         </div>
     `,

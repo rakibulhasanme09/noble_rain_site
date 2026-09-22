@@ -84,30 +84,28 @@ const OrderConfirmationPage = () => {
     }
 
     return (
-        <div className="container animate-fade-in" style={styles.page}>
-            <div style={styles.successBanner}>
+        <div style={styles.page}>
+            <div className="no-print" style={styles.successBanner}>
                 <div style={styles.checkCircle}>✓</div>
                 <h1 style={styles.title}>Thank you! Your order has been placed.</h1>
                 <p style={styles.subtitle}>
                     Order <strong>#{order._id.substring(0, 8).toUpperCase()}</strong> — we'll notify you as it progresses.
                 </p>
+                <div style={styles.actionContainer}>
+                    <button className="btn btn-primary" onClick={handleDownloadPDF}>Download PDF</button>
+                    <button className="btn btn-outline" style={{ marginLeft: '1rem' }} onClick={() => window.print()}>Print Invoice</button>
+                    <button className="btn btn-outline" style={{ marginLeft: '1rem' }} onClick={() => navigate('/')}>Continue Shopping</button>
+                </div>
             </div>
 
-            <div style={styles.actionRow}>
-                <button className="btn btn-primary" onClick={handleDownloadPDF}>Save Invoice (PDF)</button>
-                <button className="btn btn-outline" onClick={() => window.print()}>Print Invoice</button>
-                <button className="btn btn-outline" onClick={() => navigate('/')}>Continue Shopping</button>
-            </div>
-
-            <div style={styles.invoiceWrapper}>
-                <InvoiceDocument order={order} ref={invoiceRef} />
-            </div>
+            <InvoiceDocument order={order} ref={invoiceRef} />
 
             <style>
                 {`
                 @media print {
                     body * { visibility: hidden; }
                     .no-print, header, footer { display: none !important; }
+                    .main-content { padding: 0 !important; margin: 0 !important; }
                     div[style*="max-width: 800px"] * { visibility: visible; }
                     div[style*="max-width: 800px"] {
                         position: absolute; left: 0; top: 0; width: 100%;
@@ -124,6 +122,10 @@ const styles = {
     page: {
         padding: '3rem 1rem',
         minHeight: '80vh',
+        backgroundColor: '#f5f5f5',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
     },
     center: {
         padding: '5rem 1rem',
@@ -133,6 +135,8 @@ const styles = {
     successBanner: {
         textAlign: 'center',
         marginBottom: '2rem',
+        width: '100%',
+        maxWidth: '800px',
     },
     checkCircle: {
         width: '56px',
@@ -149,24 +153,17 @@ const styles = {
     title: {
         fontSize: '1.8rem',
         marginBottom: '0.5rem',
+        color: '#111',
     },
     subtitle: {
-        color: 'var(--color-text-muted)',
+        color: '#666',
     },
-    actionRow: {
+    actionContainer: {
         display: 'flex',
-        gap: '1rem',
         justifyContent: 'center',
+        marginTop: '1.5rem',
+        gap: '0.5rem',
         flexWrap: 'wrap',
-        marginBottom: '2.5rem',
-    },
-    invoiceWrapper: {
-        display: 'flex',
-        justifyContent: 'center',
-        width: '100%',
-        maxWidth: '100%',
-        overflowX: 'hidden',
-        boxSizing: 'border-box',
     },
 };
 

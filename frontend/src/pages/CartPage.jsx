@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 
 const CartPage = () => {
-    const { cartItems, removeFromCart, addToCart } = useContext(CartContext);
+    const { cartItems, removeFromCart, updateCartItemQty } = useContext(CartContext);
     const navigate = useNavigate();
 
     const checkoutHandler = () => {
@@ -36,7 +36,7 @@ const CartPage = () => {
                                 <div style={styles.itemAction}>
                                     <select 
                                         value={item.qty} 
-                                        onChange={(e) => addToCart(item, Number(e.target.value) - item.qty)}
+                                        onChange={(e) => updateCartItemQty(item.product, Number(e.target.value))}
                                         style={styles.select}
                                     >
                                         {[...Array(10).keys()].map((x) => (
