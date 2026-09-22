@@ -1,42 +1,51 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CartContext } from '../context/CartContext';
 
-// Crossfades product i in/out over a band that is ~35% of one segment's
-// width, centered on each segment boundary, so neighbors swap smoothly and
-// only one panel is ever more than half-visible at a time.
-const segmentOpacity = (progress, i, n) => {
-    const segLen = 1 / n;
-    const segStart = i * segLen;
-    const segEnd = segStart + segLen;
-    const band = segLen * 0.35;
-    let opacity = 1;
+const ChevronLeft = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+);
 
-    if (i > 0) {
-        if (progress < segStart - band) return 0;
-        if (progress < segStart + band) {
-            opacity = (progress - (segStart - band)) / (2 * band);
-        }
-    }
+const ChevronRight = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+);
 
-    if (i < n - 1) {
-        if (progress > segEnd + band) return 0;
-        if (progress > segEnd - band) {
-            const fadeOut = (segEnd + band - progress) / (2 * band);
-            opacity = Math.min(opacity, fadeOut);
-        }
-    }
-
-    return Math.max(0, Math.min(1, opacity));
-};
-
-const BagsScrollSection = ({ headerHeight = 0 }) => {
+const BagsScrollSection = () => {
     const { addToCart } = useContext(CartContext);
     const navigate = useNavigate();
-    const sectionRef = useRef(null);
     const [products, setProducts] = useState([]);
-    const [progress, setProgress] = useState(0);
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    const [touchStart, setTouchStart] = useState(null);
+    const [touchEnd, setTouchEnd] = useState(null);
+
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+        
+        if (isLeftSwipe) {
+            nextSlide();
+        }
+        if (isRightSwipe) {
+            prevSlide();
+        }
+    };
 
     useEffect(() => {
         const fetchTopSellers = async () => {
@@ -50,29 +59,12 @@ const BagsScrollSection = ({ headerHeight = 0 }) => {
         fetchTopSellers();
     }, []);
 
-    useEffect(() => {
-        const onScroll = () => {
-            const el = sectionRef.current;
-            if (!el) return;
-            const rect = el.getBoundingClientRect();
-            const paneHeight = window.innerHeight - headerHeight;
-            const total = rect.height - paneHeight;
-            const p = total > 0 ? -rect.top / total : 0;
-            setProgress(Math.min(1, Math.max(0, p)));
-        };
-        onScroll();
-        window.addEventListener('scroll', onScroll, { passive: true });
-        window.addEventListener('resize', onScroll);
-        return () => {
-            window.removeEventListener('scroll', onScroll);
-            window.removeEventListener('resize', onScroll);
-        };
-    }, [headerHeight]);
-
     if (products.length === 0) return null;
 
     const n = products.length;
-    const activeIndex = Math.min(n - 1, Math.floor(progress * n));
+
+    const prevSlide = () => setActiveIndex((i) => (i === 0 ? n - 1 : i - 1));
+    const nextSlide = () => setActiveIndex((i) => (i === n - 1 ? 0 : i + 1));
 
     const buyNow = (product) => {
         addToCart(product, 1);
@@ -81,63 +73,124 @@ const BagsScrollSection = ({ headerHeight = 0 }) => {
 
     return (
         <section
-            ref={sectionRef}
             className="bags-scroll-section"
-            style={{ position: 'relative', backgroundColor: '#f7f6f2' }}
+            style={{ backgroundColor: '#f7f6f2' }}
         >
-            <div
-                className="bags-scroll-pane"
-                style={{
-                    position: 'sticky',
-                    top: headerHeight,
-                    height: `calc(100vh - ${headerHeight}px)`,
-                    overflow: 'hidden',
-                }}
-            >
+            <style>{`
+                .bags-scroll-section {
+                    display: flex;
+                    align-items: center;
+                    min-height: calc(100vh - 55px); /* Full screen minus header */
+                    padding: 2rem 0;
+                }
+                .bags-nav-button {
+                    display: flex;
+                }
+                .bags-slider-container {
+                    position: relative;
+                    width: 100%;
+                }
+                .bags-product-panel {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 5vw;
+                    align-items: center;
+                    width: 100%;
+                    padding: 0 4rem;
+                    transition: opacity 0.4s ease-in-out;
+                }
+                @media (max-width: 768px) {
+                    .bags-scroll-section {
+                        padding: 3rem 0;
+                    }
+                    .bags-nav-button {
+                        display: none !important;
+                    }
+                    .bags-product-panel {
+                        grid-template-columns: 1fr;
+                        padding: 0 1rem;
+                        gap: 1.5rem;
+                        text-align: center;
+                    }
+                    .bags-product-details {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                    }
+                    .bags-dots {
+                        top: -1.5rem !important;
+                    }
+                }
+            `}</style>
+
+            <div className="container" style={{ position: 'relative', width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
                 <div className="bags-dots" style={styles.dots}>
                     {products.map((_, i) => (
-                        <span
+                        <button
                             key={i}
+                            onClick={() => setActiveIndex(i)}
                             style={{
                                 ...styles.dot,
                                 width: i === activeIndex ? '32px' : '16px',
                                 backgroundColor: i === activeIndex ? '#c09f6e' : 'rgba(17,17,17,0.25)',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: 0
                             }}
+                            aria-label={`Go to slide ${i + 1}`}
                         />
                     ))}
                 </div>
 
-                {products.map((product, i) => {
-                    const opacity = segmentOpacity(progress, i, n);
-                    const image = product.image || (product.images && product.images[0]);
-                    return (
-                        <div
-                            key={product._id}
-                            className="bags-product-panel"
-                            style={{
-                                ...styles.panel,
-                                opacity,
-                                pointerEvents: opacity >= 0.5 ? 'auto' : 'none',
-                            }}
-                        >
-                            <img src={image} alt={product.name} className="bags-product-image" style={styles.image} />
-                            <div className="bags-product-details">
-                                <p style={styles.eyebrow}>Top Seller · {product.category}</p>
-                                <h3 className="bags-product-name" style={styles.name}>{product.name}</h3>
-                                <p style={styles.description}>
-                                    {product.description}
-                                    {product.numReviews > 0 && ` ${product.rating.toFixed(1)}★ (${product.numReviews} reviews).`}
-                                </p>
-                                <div className="bags-price-row" style={styles.priceRow}>
-                                    <span style={styles.price}>৳{product.price}</span>
-                                    <button className="btn btn-primary" onClick={() => buyNow(product)}>
-                                        Buy Now
-                                    </button>
+                <button className="bags-nav-button" onClick={prevSlide} style={{ ...styles.navButton, left: '0' }} aria-label="Previous slide">
+                    <ChevronLeft />
+                </button>
+                <button className="bags-nav-button" onClick={nextSlide} style={{ ...styles.navButton, right: '0' }} aria-label="Next slide">
+                    <ChevronRight />
+                </button>
+
+                <div 
+                    className="bags-slider-container"
+                    onTouchStart={onTouchStart}
+                    onTouchMove={onTouchMove}
+                    onTouchEnd={onTouchEnd}
+                >
+                    {products.map((product, i) => {
+                        const isActive = i === activeIndex;
+                        const image = product.image || (product.images && product.images[0]);
+                        return (
+                            <div
+                                key={product._id}
+                                className="bags-product-panel"
+                                style={{
+                                    position: isActive ? 'relative' : 'absolute',
+                                    top: isActive ? 'auto' : 0,
+                                    left: isActive ? 'auto' : 0,
+                                    opacity: isActive ? 1 : 0,
+                                    pointerEvents: isActive ? 'auto' : 'none',
+                                    visibility: isActive ? 'visible' : 'hidden',
+                                    zIndex: isActive ? 2 : 1
+                                }}
+                            >
+                                <img src={image} alt={product.name} className="bags-product-image" style={styles.image} />
+                                <div className="bags-product-details">
+                                    <p style={styles.eyebrow}>Top Seller · {product.category}</p>
+                                    <h3 className="bags-product-name" style={styles.name}>{product.name}</h3>
+                                    <p style={styles.description}>
+                                        {product.description}
+                                        {product.numReviews > 0 && ` ${product.rating.toFixed(1)}★ (${product.numReviews} reviews).`}
+                                    </p>
+                                    <div className="bags-price-row" style={styles.priceRow}>
+                                        <span style={styles.price}>৳{product.price}</span>
+                                        <button className="btn btn-primary" onClick={() => buyNow(product)}>
+                                            Buy Now
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
+                </div>
             </div>
         </section>
     );
@@ -146,7 +199,7 @@ const BagsScrollSection = ({ headerHeight = 0 }) => {
 const styles = {
     dots: {
         position: 'absolute',
-        top: '2rem',
+        top: '-2rem',
         left: '50%',
         transform: 'translateX(-50%)',
         display: 'flex',
@@ -158,17 +211,21 @@ const styles = {
         borderRadius: '999px',
         transition: 'width 0.3s ease, background-color 0.3s ease',
     },
-    panel: {
+    navButton: {
         position: 'absolute',
-        inset: 0,
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '5vw',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        backgroundColor: '#fff',
+        border: 'none',
+        borderRadius: '50%',
+        width: '48px',
+        height: '48px',
         alignItems: 'center',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '0 2rem',
-        transition: 'opacity 0.1s linear',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        zIndex: 10,
+        color: '#333'
     },
     image: {
         justifySelf: 'center',

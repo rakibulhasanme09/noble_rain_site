@@ -30,6 +30,13 @@ const Header = forwardRef((props, ref) => {
         navigate(trimmed ? `/search?keyword=${encodeURIComponent(trimmed)}` : '/search');
     };
 
+    const handleSearchChange = (e) => {
+        const val = e.target.value;
+        setKeyword(val);
+        const trimmed = val.trim();
+        navigate(trimmed ? `/search?keyword=${encodeURIComponent(trimmed)}` : '/search');
+    };
+
     return (
         <header ref={ref} style={styles.header}>
             <div className="container" style={styles.container}>
@@ -51,7 +58,7 @@ const Header = forwardRef((props, ref) => {
                     <input
                         type="text"
                         value={keyword}
-                        onChange={(e) => setKeyword(e.target.value)}
+                        onChange={handleSearchChange}
                         placeholder="Search products..."
                         style={styles.searchInput}
                         aria-label="Search products"

@@ -202,48 +202,12 @@ select:focus {
   min-width: 0;
 }
 
-.bags-scroll-section {
-  height: 300vh;
-}
 
 @media (max-width: 768px) {
   .video-hero {
     height: 60vh !important;
   }
 
-  .bags-scroll-section {
-    height: 220vh !important;
-  }
-
-  .bags-dots {
-    top: 1rem !important;
-  }
-
-  .bags-product-panel {
-    grid-template-columns: 1fr !important;
-    text-align: center !important;
-    padding: 0 1.5rem !important;
-    overflow-y: auto !important;
-  }
-
-  .bags-product-image {
-    width: min(70%, 300px) !important;
-  }
-
-  .bags-product-details {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .bags-product-name {
-    font-size: clamp(1.3rem, 5vw, 1.8rem) !important;
-  }
-
-  .bags-price-row {
-    flex-wrap: wrap !important;
-    justify-content: center !important;
-  }
 
   .flex-row-mobile-column {
     flex-direction: column;
