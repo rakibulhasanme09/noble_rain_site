@@ -30,7 +30,7 @@ const HomePage = ({ headerHeight = 0 }) => {
         const fetchProducts = async () => {
             setLoading(true);
             try {
-                const params = new URLSearchParams({ pageNumber: page, pageSize: 1, sort: filters.sort });
+                const params = new URLSearchParams({ pageNumber: page, pageSize: 6, sort: filters.sort });
                 if (filters.category !== 'All') params.set('category', filters.category);
                 if (filters.minPrice) params.set('minPrice', filters.minPrice);
                 if (filters.maxPrice) params.set('maxPrice', filters.maxPrice);
